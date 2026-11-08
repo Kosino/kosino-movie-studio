@@ -510,8 +510,16 @@ img {
   gap: 0.5rem;
 }
 
+.card__dur-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
 .card__dur {
-  width: 3.4rem;
+  width: 3rem;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--bg-soft);

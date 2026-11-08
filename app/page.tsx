@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface Panel {
   id: string;
@@ -87,11 +87,32 @@ export default function Home() {
   const [useEdit, setUseEdit] = useState(true);
   const [selectedCharacter, setSelectedCharacter] = useState(0);
   const [selectedLocation, setSelectedLocation] = useState(0);
+  const [showShotComposer, setShowShotComposer] = useState(true);
 
   const totalDuration = useMemo(
     () => project.panels.reduce((sum, p) => sum + (Number(p.duration) || 0), 0),
     [project.panels]
   );
+
+  // Optional demo fill: /?demo=1 — mirrors the Grok mockup density for review
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("demo") !== "1") return;
+    setShowShotComposer(false);
+    setProject({
+      name: "Kosino – Intro",
+      panels: [
+        { id: "d1", prompt: "Aerial approach over Most", cameraType: "Wide", duration: 2.5, imageUrl: "/demo/shot-01.jpg" },
+        { id: "d2", prompt: "Character rising above the city", cameraType: "Wide", duration: 2.0, imageUrl: "/demo/shot-02.jpg" },
+        { id: "d3", prompt: "Close-up — bird eye over rooftops", cameraType: "Close-up", duration: 1.5, imageUrl: "/demo/shot-03.jpg" },
+        { id: "d4", prompt: "Wide glide past the bridge", cameraType: "Wide", duration: 2.0, imageUrl: "/demo/shot-04.jpg" },
+        { id: "d5", prompt: "Golden hour silhouette", cameraType: "Medium", duration: 1.5, imageUrl: "/demo/shot-05.jpg" },
+        { id: "d6", prompt: "Final soar into sunset", cameraType: "Aerial", duration: 0.5, imageUrl: "/demo/shot-06.jpg" },
+      ],
+      characterRefs: ["/demo/char-01.jpg", "/demo/char-02.jpg", "/demo/char-03.jpg", "/demo/char-04.jpg"],
+      locationRefs: ["/demo/loc-01.jpg", "/demo/loc-02.jpg", "/demo/loc-03.jpg", "/demo/loc-04.jpg"],
+    });
+  }, []);
 
   async function upload(type: "character" | "location", e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -132,6 +153,7 @@ export default function Home() {
         duration: 3,
       }));
       setProject((p) => ({ ...p, panels }));
+      setShowShotComposer(false);
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : "Parse selhal");
     } finally {
@@ -319,24 +341,39 @@ export default function Home() {
               <IconList /> Shot List
             </h2>
             <div className="shotlist-box">
-              <textarea
-                className="shotlist-input"
-                value={shotListText}
-                onChange={(e) => setShotListText(e.target.value)}
-                placeholder="Vlož shot list nebo scénář..."
-                rows={3}
-              />
-              <div className="shotlist-actions">
-                <button
-                  type="button"
-                  className="btn btn--primary"
-                  style={{ borderRadius: 8, padding: "0.4rem 0.85rem", fontSize: "0.8rem" }}
-                  onClick={parseShotList}
-                  disabled={loading}
-                >
-                  Vytvořit panely
-                </button>
-              </div>
+              {(showShotComposer || project.panels.length === 0) && (
+                <>
+                  <textarea
+                    className="shotlist-input"
+                    value={shotListText}
+                    onChange={(e) => setShotListText(e.target.value)}
+                    placeholder="Vlož shot list nebo scénář..."
+                    rows={3}
+                  />
+                  <div className="shotlist-actions">
+                    <button
+                      type="button"
+                      className="btn btn--primary"
+                      style={{ borderRadius: 8, padding: "0.4rem 0.85rem", fontSize: "0.8rem" }}
+                      onClick={parseShotList}
+                      disabled={loading}
+                    >
+                      Vytvořit panely
+                    </button>
+                  </div>
+                </>
+              )}
+              {project.panels.length > 0 && !showShotComposer && (
+                <div className="shotlist-actions">
+                  <button
+                    type="button"
+                    className="btn btn--ghost"
+                    onClick={() => setShowShotComposer(true)}
+                  >
+                    Upravit shot list
+                  </button>
+                </div>
+              )}
               {project.panels.length > 0 && (
                 <ul className="shot-rows">
                   {project.panels.map((panel, i) => (
@@ -408,14 +445,17 @@ export default function Home() {
                       rows={2}
                     />
                     <div className="card__footer">
-                      <input
-                        className="card__dur"
-                        type="number"
-                        step="0.5"
-                        value={panel.duration}
-                        onChange={(e) => updatePanel(i, { duration: Number(e.target.value) })}
-                        aria-label="Délka"
-                      />
+                      <label className="card__dur-wrap">
+                        <input
+                          className="card__dur"
+                          type="number"
+                          step="0.5"
+                          value={panel.duration}
+                          onChange={(e) => updatePanel(i, { duration: Number(e.target.value) })}
+                          aria-label="Délka"
+                        />
+                        <span>s</span>
+                      </label>
                       <button
                         type="button"
                         className="btn btn--icon"
