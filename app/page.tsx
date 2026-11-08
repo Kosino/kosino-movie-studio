@@ -70,6 +70,7 @@ export default function Home() {
         duration: 3,
       }));
       setProject((p) => ({ ...p, panels }));
+      document.getElementById("storyboard")?.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : "Parse selhal");
     } finally {
@@ -139,200 +140,225 @@ export default function Home() {
   function addEmptyPanel() {
     setProject((p) => ({
       ...p,
-      panels: [...p.panels, { id: Date.now().toString(), prompt: "New shot...", cameraType: "Wide", duration: 3 }],
+      panels: [
+        ...p.panels,
+        { id: Date.now().toString(), prompt: "New shot...", cameraType: "Wide", duration: 3 },
+      ],
     }));
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0c0c0e", color: "#f5f5f7", fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif" }}>
-      <header style={{ padding: "20px 40px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 28, height: 28, background: "linear-gradient(135deg,#d4af37,#f4e4bc)", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "#000", fontSize: 14 }}>K</div>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 600 }}>Kosino</div>
-            <div style={{ fontSize: 11, color: "#86868b" }}>Movie Studio</div>
+    <div className="page">
+      <section className="hero" aria-label="Kosino Movie Studio">
+        <div className="hero__media" aria-hidden>
+          <img src="/hero-cinema.jpg" alt="" />
+          <div className="hero__veil" />
+        </div>
+        <div className="hero__content">
+          <div className="brand">
+            <div className="brand__mark">Kosino</div>
+            <div className="brand__sub">Movie Studio</div>
+          </div>
+          <h1 className="hero__headline">Storyboard, který drží postavu i místo.</h1>
+          <p className="hero__support">
+            Character Lock, Location Lock a shot list v jednom klidném pracovním prostoru.
+          </p>
+          <div className="cta-row">
+            <a className="btn btn--primary" href="#studio">
+              Otevřít studio
+            </a>
+            <a className="btn btn--ghost" href="#shotlist">
+              Vložit shot list
+            </a>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={saveProject} style={btnSecondary}>Uložit</button>
-          <button onClick={animate} style={btnPrimary}>Animovat</button>
-        </div>
-      </header>
+      </section>
 
-      <main style={{ padding: "32px 40px", maxWidth: 1280, margin: "0 auto" }}>
+      <main id="studio" className="studio">
+        <div className="studio__bar">
+          <div className="studio__bar-label">Pracovní prostor</div>
+          <div className="studio__actions">
+            <button type="button" className="btn btn--quiet btn--small" onClick={saveProject}>
+              Uložit
+            </button>
+            <button type="button" className="btn btn--ink btn--small" onClick={animate}>
+              Animovat
+            </button>
+          </div>
+        </div>
+
         <input
+          className="project-name"
           value={project.name}
           onChange={(e) => setProject({ ...project, name: e.target.value })}
-          style={{ background: "transparent", border: "none", fontSize: 34, fontWeight: 600, color: "#f5f5f7", width: "100%", outline: "none", marginBottom: 28 }}
+          aria-label="Název projektu"
         />
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 28 }}>
-          <section style={card}>
-            <h3 style={sectionTitle}>Character Lock</h3>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              {project.characterRefs.map((r) => (
-                <img key={r} src={r} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 10 }} />
-              ))}
-              <label style={uploadBox}>
-                +
-                <input type="file" accept="image/*" onChange={(e) => upload("character", e)} style={{ display: "none" }} />
+        <section className="section" aria-labelledby="locks-title">
+          <p className="section__eyebrow">Reference</p>
+          <h2 id="locks-title" className="section__title">
+            Zamkni postavu a lokaci
+          </h2>
+          <p className="section__hint">
+            Nahraj vizuální kotvy. Image Editing drží konzistenci při generování panelů.
+          </p>
+          <div className="lock-grid">
+            <div className="surface">
+              <h3 className="surface__title">Character Lock</h3>
+              <div className="thumb-row">
+                {project.characterRefs.map((r) => (
+                  <img key={r} src={r} alt="" className="thumb" />
+                ))}
+                <label className="upload">
+                  +
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => upload("character", e)}
+                    style={{ display: "none" }}
+                  />
+                </label>
+              </div>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={useEdit}
+                  onChange={(e) => setUseEdit(e.target.checked)}
+                />
+                Image Editing
               </label>
             </div>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, fontSize: 13, color: "#86868b" }}>
-              <input type="checkbox" checked={useEdit} onChange={(e) => setUseEdit(e.target.checked)} />
-              Image Editing
-            </label>
-          </section>
 
-          <section style={card}>
-            <h3 style={sectionTitle}>Location Lock</h3>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              {project.locationRefs.map((r) => (
-                <img key={r} src={r} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 10 }} />
-              ))}
-              <label style={uploadBox}>
-                +
-                <input type="file" accept="image/*" onChange={(e) => upload("location", e)} style={{ display: "none" }} />
-              </label>
+            <div className="surface">
+              <h3 className="surface__title">Location Lock</h3>
+              <div className="thumb-row">
+                {project.locationRefs.map((r) => (
+                  <img key={r} src={r} alt="" className="thumb" />
+                ))}
+                <label className="upload">
+                  +
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => upload("location", e)}
+                    style={{ display: "none" }}
+                  />
+                </label>
+              </div>
             </div>
-          </section>
-        </div>
-
-        <section style={{ ...card, marginBottom: 28 }}>
-          <h3 style={sectionTitle}>Shot List</h3>
-          <textarea
-            value={shotListText}
-            onChange={(e) => setShotListText(e.target.value)}
-            placeholder="Vlož shot list nebo scénář..."
-            rows={3}
-            style={textarea}
-          />
-          <button onClick={parseShotList} disabled={loading} style={{ ...btnPrimary, marginTop: 10 }}>
-            Vytvořit panely
-          </button>
+          </div>
         </section>
 
-        <section>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <h3 style={sectionTitle}>Storyboard</h3>
-            <button onClick={addEmptyPanel} style={btnSecondary}>+ Panel</button>
+        <section id="shotlist" className="section" aria-labelledby="shotlist-title">
+          <p className="section__eyebrow">Shot list</p>
+          <h2 id="shotlist-title" className="section__title">
+            Rozlož scénář na panely
+          </h2>
+          <p className="section__hint">Vlož shot list nebo scénář — studio z něj sestaví storyboard.</p>
+          <div className="surface">
+            <textarea
+              className="field"
+              value={shotListText}
+              onChange={(e) => setShotListText(e.target.value)}
+              placeholder="Vlož shot list nebo scénář..."
+              rows={4}
+            />
+            <div className="shot-actions">
+              <button
+                type="button"
+                className="btn btn--primary"
+                onClick={parseShotList}
+                disabled={loading}
+              >
+                Vytvořit panely
+              </button>
+            </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 16 }}>
-            {project.panels.map((panel, i) => (
-              <div key={panel.id} style={card}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                  <span style={{ fontSize: 12, color: "#86868b" }}>0{i + 1}</span>
-                  <select
-                    value={panel.cameraType}
+        </section>
+
+        <section id="storyboard" className="section" aria-labelledby="storyboard-title">
+          <div className="storyboard-head">
+            <div>
+              <p className="section__eyebrow">Storyboard</p>
+              <h2 id="storyboard-title" className="section__title">
+                Panely a kamera
+              </h2>
+              <p className="section__hint" style={{ marginBottom: 0 }}>
+                Uprav prompt, typ záběru a délku — pak generuj nebo regeneruj.
+              </p>
+            </div>
+            <button type="button" className="btn btn--quiet btn--small" onClick={addEmptyPanel}>
+              + Panel
+            </button>
+          </div>
+
+          {project.panels.length === 0 ? (
+            <p className="empty">Zatím žádné panely. Vlož shot list výše, nebo přidej panel ručně.</p>
+          ) : (
+            <div className="panel-grid">
+              {project.panels.map((panel, i) => (
+                <div
+                  key={panel.id}
+                  className="surface panel"
+                  style={{ animationDelay: `${Math.min(i, 8) * 0.05}s` }}
+                >
+                  <div className="panel__meta">
+                    <span className="panel__index">{String(i + 1).padStart(2, "0")}</span>
+                    <select
+                      className="select"
+                      style={{ width: "auto" }}
+                      value={panel.cameraType}
+                      onChange={(e) => {
+                        const panels = [...project.panels];
+                        panels[i].cameraType = e.target.value;
+                        setProject({ ...project, panels });
+                      }}
+                    >
+                      {CAMERA_TYPES.map((c) => (
+                        <option key={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <textarea
+                    className="field"
+                    value={panel.prompt}
                     onChange={(e) => {
                       const panels = [...project.panels];
-                      panels[i].cameraType = e.target.value;
+                      panels[i].prompt = e.target.value;
                       setProject({ ...project, panels });
                     }}
-                    style={{ background: "#1c1c1e", color: "#f5f5f7", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 12 }}
-                  >
-                    {CAMERA_TYPES.map((c) => (
-                      <option key={c}>{c}</option>
-                    ))}
-                  </select>
-                </div>
-                <textarea
-                  value={panel.prompt}
-                  onChange={(e) => {
-                    const panels = [...project.panels];
-                    panels[i].prompt = e.target.value;
-                    setProject({ ...project, panels });
-                  }}
-                  rows={2}
-                  style={{ ...textarea, marginBottom: 8 }}
-                />
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <input
-                    type="number"
-                    value={panel.duration}
-                    onChange={(e) => {
-                      const panels = [...project.panels];
-                      panels[i].duration = Number(e.target.value);
-                      setProject({ ...project, panels });
-                    }}
-                    style={{ width: 50, background: "#1c1c1e", color: "#f5f5f7", border: "none", borderRadius: 6, padding: 4 }}
+                    rows={3}
                   />
-                  <button onClick={() => generatePanel(i)} disabled={loading} style={btnPrimary}>
-                    {panel.imageUrl ? "Regenerovat" : "Generovat"}
-                  </button>
+                  <div className="panel__footer">
+                    <input
+                      className="number"
+                      type="number"
+                      value={panel.duration}
+                      onChange={(e) => {
+                        const panels = [...project.panels];
+                        panels[i].duration = Number(e.target.value);
+                        setProject({ ...project, panels });
+                      }}
+                      aria-label="Délka panelu"
+                    />
+                    <button
+                      type="button"
+                      className="btn btn--primary btn--small"
+                      onClick={() => generatePanel(i)}
+                      disabled={loading}
+                    >
+                      {panel.imageUrl ? "Regenerovat" : "Generovat"}
+                    </button>
+                  </div>
+                  {panel.imageUrl && (
+                    <img src={panel.imageUrl} alt="" className="panel__image" />
+                  )}
                 </div>
-                {panel.imageUrl && (
-                  <img src={panel.imageUrl} alt="" style={{ width: "100%", borderRadius: 10, marginTop: 12 }} />
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
       </main>
     </div>
   );
 }
-
-const card: React.CSSProperties = {
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(255,255,255,0.06)",
-  borderRadius: 16,
-  padding: 20,
-};
-
-const sectionTitle: React.CSSProperties = {
-  margin: "0 0 12px",
-  fontSize: 12,
-  fontWeight: 600,
-  letterSpacing: "0.6px",
-  textTransform: "uppercase",
-  color: "#86868b",
-};
-
-const btnPrimary: React.CSSProperties = {
-  background: "#0071e3",
-  color: "white",
-  border: "none",
-  borderRadius: 980,
-  padding: "8px 16px",
-  fontSize: 13,
-  fontWeight: 500,
-  cursor: "pointer",
-};
-
-const btnSecondary: React.CSSProperties = {
-  background: "rgba(255,255,255,0.08)",
-  color: "#f5f5f7",
-  border: "1px solid rgba(255,255,255,0.1)",
-  borderRadius: 980,
-  padding: "8px 16px",
-  fontSize: 13,
-  fontWeight: 500,
-  cursor: "pointer",
-};
-
-const uploadBox: React.CSSProperties = {
-  width: 64,
-  height: 64,
-  borderRadius: 10,
-  border: "1px dashed rgba(255,255,255,0.2)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  cursor: "pointer",
-  color: "#86868b",
-  fontSize: 22,
-};
-
-const textarea: React.CSSProperties = {
-  width: "100%",
-  background: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(255,255,255,0.08)",
-  borderRadius: 10,
-  padding: 10,
-  color: "#f5f5f7",
-  fontSize: 14,
-  fontFamily: "inherit",
-  resize: "vertical",
-  outline: "none",
-};
