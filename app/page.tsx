@@ -23,8 +23,9 @@ const CAMERA_TYPES = ["Wide", "Medium", "Close-up", "Aerial", "Low angle"];
 function IconWing({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 32 32" fill="currentColor" aria-hidden>
-      <path d="M4 18c6-1 10-6 12-12 1 5 4 9 10 11-5 1-8 4-9 9-2-5-6-7-13-8z" />
-      <path d="M14 22c3 .4 5 2.2 6 5.5-2.2-.6-4.2-1.8-6-5.5z" opacity="0.7" />
+      <path d="M3 17.5C9.5 16 14 10.5 16.5 4c1.2 5.8 4.2 10.2 10.5 12.2-4.8 1.2-7.7 4.2-8.8 9.3C16.5 20.2 11.8 18.2 3 17.5z" />
+      <path d="M15.2 21.8c2.8.5 4.7 2.4 5.6 5.7-2.5-.7-4.5-2.3-5.6-5.7z" opacity="0.65" />
+      <path d="M7.5 14.2c2.1-3.6 4.2-5.8 6.2-7.1-1.5 2.8-2.4 5.1-2.8 7.4-1.2.1-2.3-.1-3.4-.3z" opacity="0.45" />
     </svg>
   );
 }
@@ -58,8 +59,9 @@ function IconSave({ className }: { className?: string }) {
 function IconSpark({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <path d="M12 2l1.2 6.3L19 10l-5.8 1.7L12 18l-1.2-6.3L5 10l5.8-1.7L12 2z" />
-      <path d="M19 14l.6 2.4L22 17l-2.4.6L19 20l-.6-2.4L16 17l2.4-.6L19 14z" opacity="0.85" />
+      <path d="M12 3.2l.95 4.9 4.9.95-4.9.95L12 14.9l-.95-4.9-4.9-.95 4.9-.95L12 3.2z" />
+      <path d="M18.2 13.4l.55 2.45 2.45.55-2.45.55-.55 2.45-.55-2.45-2.45-.55 2.45-.55.55-2.45z" />
+      <path d="M6.4 15l.4 1.7 1.7.4-1.7.4-.4 1.7-.4-1.7-1.7-.4 1.7-.4.4-1.7z" opacity="0.9" />
     </svg>
   );
 }
