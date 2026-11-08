@@ -17,6 +17,26 @@ function escapeConcatPath(filePath: string): string {
   return filePath.replace(/'/g, "'\\''");
 }
 
+function normalizeFrame(src: string, dest: string): boolean {
+  const result = spawnSync(
+    "ffmpeg",
+    [
+      "-y",
+      "-i",
+      src,
+      "-vf",
+      "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1",
+      "-frames:v",
+      "1",
+      "-update",
+      "1",
+      dest,
+    ],
+    { encoding: "utf8" }
+  );
+  return result.status === 0 && fs.existsSync(dest) && fs.statSync(dest).size > 0;
+}
+
 export async function POST(req: NextRequest) {
   try {
     ensureDirs();
@@ -58,20 +78,34 @@ export async function POST(req: NextRequest) {
     }
 
     const workDir = path.join(ANIMATIONS_DIR, `work-${projectId}`);
+    fs.rmSync(workDir, { recursive: true, force: true });
     fs.mkdirSync(workDir, { recursive: true });
+
+    const normalized: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const dest = path.join(workDir, `frame-${String(i + 1).padStart(4, "0")}.png`);
+      if (!normalizeFrame(files[i], dest)) {
+        return NextResponse.json(
+          { error: `Nepodařilo se připravit frame ${i + 1}` },
+          { status: 500 }
+        );
+      }
+      normalized.push(dest);
+    }
 
     const listFile = path.join(workDir, "list.txt");
     const duration = Math.max(secondsPerFrame, 0.2);
     const lines: string[] = [];
-    for (const f of files) {
+    for (const f of normalized) {
       lines.push(`file '${escapeConcatPath(f)}'`);
       lines.push(`duration ${duration}`);
     }
-    // concat demuxer requires the last file listed again without duration
-    lines.push(`file '${escapeConcatPath(files[files.length - 1])}'`);
+    lines.push(`file '${escapeConcatPath(normalized[normalized.length - 1])}'`);
     fs.writeFileSync(listFile, lines.join("\n") + "\n", "utf8");
 
     const outPath = path.join(ANIMATIONS_DIR, `${projectId}.mp4`);
+    if (fs.existsSync(outPath)) fs.unlinkSync(outPath);
+
     const result = spawnSync(
       "ffmpeg",
       [
@@ -82,8 +116,6 @@ export async function POST(req: NextRequest) {
         "0",
         "-i",
         listFile,
-        "-vf",
-        "scale=trunc(iw/2)*2:trunc(ih/2)*2",
         "-pix_fmt",
         "yuv420p",
         "-c:v",
@@ -93,11 +125,12 @@ export async function POST(req: NextRequest) {
       { encoding: "utf8" }
     );
 
-    if (result.status !== 0 || !fs.existsSync(outPath)) {
+    if (result.status !== 0 || !fs.existsSync(outPath) || fs.statSync(outPath).size === 0) {
+      if (fs.existsSync(outPath)) fs.unlinkSync(outPath);
       return NextResponse.json(
         {
           error: "ffmpeg selhal",
-          details: result.stderr?.slice(-2000) || result.stdout?.slice(-2000),
+          details: (result.stderr || result.stdout || "").slice(-2000),
         },
         { status: 500 }
       );
@@ -106,7 +139,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       videoUrl: publicUrl(outPath),
       projectId,
-      frameCount: files.length,
+      frameCount: normalized.length,
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Animace selhala";
