@@ -1,14 +1,8 @@
 import type { Metadata } from "next";
-import { Syne, Figtree } from "next/font/google";
+import { Manrope } from "next/font/google";
 import "./globals.css";
 
-const syne = Syne({
-  subsets: ["latin", "latin-ext"],
-  variable: "--font-display",
-  weight: ["500", "600", "700", "800"],
-});
-
-const figtree = Figtree({
+const manrope = Manrope({
   subsets: ["latin", "latin-ext"],
   variable: "--font-body",
   weight: ["400", "500", "600", "700"],
@@ -25,7 +19,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="cs" className={`${syne.variable} ${figtree.variable}`}>
+    <html lang="cs" className={manrope.variable}>
       <body>{children}</body>
     </html>
   );

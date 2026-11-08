@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 interface Panel {
   id: string;
@@ -20,6 +20,59 @@ interface Project {
 
 const CAMERA_TYPES = ["Wide", "Medium", "Close-up", "Aerial", "Low angle"];
 
+function IconWing({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 32 32" fill="currentColor" aria-hidden>
+      <path d="M4 18c6-1 10-6 12-12 1 5 4 9 10 11-5 1-8 4-9 9-2-5-6-7-13-8z" />
+      <path d="M14 22c3 .4 5 2.2 6 5.5-2.2-.6-4.2-1.8-6-5.5z" opacity="0.7" />
+    </svg>
+  );
+}
+
+function IconLock({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </svg>
+  );
+}
+
+function IconList({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+      <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconSave({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+      <path d="M5 3h11l3 3v15H5V3z" />
+      <path d="M8 3v6h8V3M8 21v-7h8v7" />
+    </svg>
+  );
+}
+
+function IconSpark({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M12 2l1.2 6.3L19 10l-5.8 1.7L12 18l-1.2-6.3L5 10l5.8-1.7L12 2z" />
+      <path d="M19 14l.6 2.4L22 17l-2.4.6L19 20l-.6-2.4L16 17l2.4-.6L19 14z" opacity="0.85" />
+    </svg>
+  );
+}
+
+function IconRefresh({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+      <path d="M21 12a9 9 0 1 1-2.6-6.3" strokeLinecap="round" />
+      <path d="M21 4v5h-5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export default function Home() {
   const [project, setProject] = useState<Project>({
     name: "Kosino – Intro",
@@ -30,6 +83,13 @@ export default function Home() {
   const [shotListText, setShotListText] = useState("");
   const [loading, setLoading] = useState(false);
   const [useEdit, setUseEdit] = useState(true);
+  const [selectedCharacter, setSelectedCharacter] = useState(0);
+  const [selectedLocation, setSelectedLocation] = useState(0);
+
+  const totalDuration = useMemo(
+    () => project.panels.reduce((sum, p) => sum + (Number(p.duration) || 0), 0),
+    [project.panels]
+  );
 
   async function upload(type: "character" | "location", e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -43,13 +103,13 @@ export default function Home() {
       alert(data.error || "Upload selhal");
       return;
     }
-    setProject((p) => ({
-      ...p,
-      [type === "character" ? "characterRefs" : "locationRefs"]: [
-        ...(type === "character" ? p.characterRefs : p.locationRefs),
-        data.path,
-      ],
-    }));
+    setProject((p) => {
+      const key = type === "character" ? "characterRefs" : "locationRefs";
+      const next = [...p[key], data.path];
+      return { ...p, [key]: next };
+    });
+    if (type === "character") setSelectedCharacter((i) => (project.characterRefs.length === 0 ? 0 : i));
+    e.target.value = "";
   }
 
   async function parseShotList() {
@@ -70,7 +130,6 @@ export default function Home() {
         duration: 3,
       }));
       setProject((p) => ({ ...p, panels }));
-      document.getElementById("storyboard")?.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : "Parse selhal");
     } finally {
@@ -82,13 +141,14 @@ export default function Home() {
     setLoading(true);
     try {
       const panel = project.panels[index];
+      const characterRef = project.characterRefs[selectedCharacter] || project.characterRefs[0];
       const res = await fetch("/api/generate-panel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           scenePrompt: panel.prompt,
           useEdit,
-          referencePath: project.characterRefs[0],
+          referencePath: characterRef,
           cameraType: panel.cameraType,
           locationHint: project.locationRefs.length ? "Most city center, golden hour" : undefined,
         }),
@@ -147,218 +207,231 @@ export default function Home() {
     }));
   }
 
+  function updatePanel(index: number, patch: Partial<Panel>) {
+    setProject((p) => {
+      const panels = [...p.panels];
+      panels[index] = { ...panels[index], ...patch };
+      return { ...p, panels };
+    });
+  }
+
+  function renderLockSlots(
+    refs: string[],
+    selected: number,
+    onSelect: (i: number) => void,
+    type: "character" | "location"
+  ) {
+    const slots = Array.from({ length: 4 }, (_, i) => refs[i] || null);
+    return (
+      <div className="thumb-row">
+        {slots.map((src, i) =>
+          src ? (
+            <button
+              key={`${type}-${src}-${i}`}
+              type="button"
+              className={`thumb${selected === i ? " is-selected" : ""}`}
+              onClick={() => onSelect(i)}
+              aria-label={`${type} reference ${i + 1}`}
+            >
+              <img src={src} alt="" />
+              {selected === i && <span className="thumb__check">✓</span>}
+            </button>
+          ) : (
+            <label key={`${type}-empty-${i}`} className="upload-slot">
+              +
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => upload(type, e)}
+                style={{ display: "none" }}
+              />
+            </label>
+          )
+        )}
+      </div>
+    );
+  }
+
   return (
-    <div className="page">
-      <section className="hero" aria-label="Kosino Movie Studio">
-        <div className="hero__media" aria-hidden>
-          <img src="/hero-cinema.jpg" alt="" />
-          <div className="hero__veil" />
+    <div className="app">
+      <header className="topbar">
+        <div className="brand">
+          <IconWing className="brand__logo" />
+          <div className="brand__name">Kosino Movie Studio</div>
         </div>
-        <div className="hero__content">
-          <div className="brand">
-            <div className="brand__mark">Kosino</div>
-            <div className="brand__sub">Movie Studio</div>
-          </div>
-          <h1 className="hero__headline">Storyboard, který drží postavu i místo.</h1>
-          <p className="hero__support">
-            Character Lock, Location Lock a shot list v jednom klidném pracovním prostoru.
-          </p>
-          <div className="cta-row">
-            <a className="btn btn--primary" href="#studio">
-              Otevřít studio
-            </a>
-            <a className="btn btn--ghost" href="#shotlist">
-              Vložit shot list
-            </a>
-          </div>
+        <div className="topbar__actions">
+          <button type="button" className="btn btn--quiet" onClick={saveProject}>
+            <IconSave />
+            Uložit
+          </button>
+          <button type="button" className="btn btn--primary" onClick={animate}>
+            <IconSpark />
+            Animovat
+          </button>
         </div>
-      </section>
+      </header>
 
-      <main id="studio" className="studio">
-        <div className="studio__bar">
-          <div className="studio__bar-label">Pracovní prostor</div>
-          <div className="studio__actions">
-            <button type="button" className="btn btn--quiet btn--small" onClick={saveProject}>
-              Uložit
-            </button>
-            <button type="button" className="btn btn--ink btn--small" onClick={animate}>
-              Animovat
-            </button>
-          </div>
-        </div>
+      <div className="workspace">
+        <aside className="sidebar">
+          <input
+            className="project-name"
+            value={project.name}
+            onChange={(e) => setProject({ ...project, name: e.target.value })}
+            aria-label="Název projektu"
+          />
 
-        <input
-          className="project-name"
-          value={project.name}
-          onChange={(e) => setProject({ ...project, name: e.target.value })}
-          aria-label="Název projektu"
-        />
+          <section className="section">
+            <h2 className="section__label">
+              <IconLock /> Character Lock
+            </h2>
+            {renderLockSlots(
+              project.characterRefs,
+              selectedCharacter,
+              setSelectedCharacter,
+              "character"
+            )}
+            <label className="check-row">
+              <input
+                type="checkbox"
+                checked={useEdit}
+                onChange={(e) => setUseEdit(e.target.checked)}
+              />
+              Image Editing
+            </label>
+          </section>
 
-        <section className="section" aria-labelledby="locks-title">
-          <p className="section__eyebrow">Reference</p>
-          <h2 id="locks-title" className="section__title">
-            Zamkni postavu a lokaci
-          </h2>
-          <p className="section__hint">
-            Nahraj vizuální kotvy. Image Editing drží konzistenci při generování panelů.
-          </p>
-          <div className="lock-grid">
-            <div className="surface">
-              <h3 className="surface__title">Character Lock</h3>
-              <div className="thumb-row">
-                {project.characterRefs.map((r) => (
-                  <img key={r} src={r} alt="" className="thumb" />
-                ))}
-                <label className="upload">
-                  +
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => upload("character", e)}
-                    style={{ display: "none" }}
-                  />
-                </label>
+          <section className="section">
+            <h2 className="section__label">
+              <IconLock /> Location Lock
+            </h2>
+            {renderLockSlots(
+              project.locationRefs,
+              selectedLocation,
+              setSelectedLocation,
+              "location"
+            )}
+          </section>
+
+          <section className="section">
+            <h2 className="section__label">
+              <IconList /> Shot List
+            </h2>
+            <div className="shotlist-box">
+              <textarea
+                className="shotlist-input"
+                value={shotListText}
+                onChange={(e) => setShotListText(e.target.value)}
+                placeholder="Vlož shot list nebo scénář..."
+                rows={3}
+              />
+              <div className="shotlist-actions">
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  style={{ borderRadius: 8, padding: "0.4rem 0.85rem", fontSize: "0.8rem" }}
+                  onClick={parseShotList}
+                  disabled={loading}
+                >
+                  Vytvořit panely
+                </button>
               </div>
-              <label className="check">
-                <input
-                  type="checkbox"
-                  checked={useEdit}
-                  onChange={(e) => setUseEdit(e.target.checked)}
-                />
-                Image Editing
-              </label>
-            </div>
-
-            <div className="surface">
-              <h3 className="surface__title">Location Lock</h3>
-              <div className="thumb-row">
-                {project.locationRefs.map((r) => (
-                  <img key={r} src={r} alt="" className="thumb" />
-                ))}
-                <label className="upload">
-                  +
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => upload("location", e)}
-                    style={{ display: "none" }}
-                  />
-                </label>
+              {project.panels.length > 0 && (
+                <ul className="shot-rows">
+                  {project.panels.map((panel, i) => (
+                    <li key={panel.id} className="shot-row">
+                      <span className="shot-num">{String(i + 1).padStart(2, "0")}</span>
+                      <span className="shot-title" title={panel.prompt}>
+                        {panel.prompt}
+                      </span>
+                      <span className="pill">{panel.cameraType}</span>
+                      <span className="shot-dur">{Number(panel.duration).toFixed(1)}s</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="shotlist-total">
+                <span>
+                  <IconSpark />
+                  Total Duration: <strong>{totalDuration.toFixed(1)}s</strong>
+                </span>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </aside>
 
-        <section id="shotlist" className="section" aria-labelledby="shotlist-title">
-          <p className="section__eyebrow">Shot list</p>
-          <h2 id="shotlist-title" className="section__title">
-            Rozlož scénář na panely
-          </h2>
-          <p className="section__hint">Vlož shot list nebo scénář — studio z něj sestaví storyboard.</p>
-          <div className="surface">
-            <textarea
-              className="field"
-              value={shotListText}
-              onChange={(e) => setShotListText(e.target.value)}
-              placeholder="Vlož shot list nebo scénář..."
-              rows={4}
-            />
-            <div className="shot-actions">
-              <button
-                type="button"
-                className="btn btn--primary"
-                onClick={parseShotList}
-                disabled={loading}
-              >
-                Vytvořit panely
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <section id="storyboard" className="section" aria-labelledby="storyboard-title">
-          <div className="storyboard-head">
-            <div>
-              <p className="section__eyebrow">Storyboard</p>
-              <h2 id="storyboard-title" className="section__title">
-                Panely a kamera
-              </h2>
-              <p className="section__hint" style={{ marginBottom: 0 }}>
-                Uprav prompt, typ záběru a délku — pak generuj nebo regeneruj.
-              </p>
-            </div>
-            <button type="button" className="btn btn--quiet btn--small" onClick={addEmptyPanel}>
+        <main className="main" id="storyboard">
+          <div className="story-head">
+            <p className="eyebrow" style={{ marginBottom: 0 }}>
+              Storyboard
+            </p>
+            <button type="button" className="btn btn--ghost" onClick={addEmptyPanel}>
               + Panel
             </button>
           </div>
 
           {project.panels.length === 0 ? (
-            <p className="empty">Zatím žádné panely. Vlož shot list výše, nebo přidej panel ručně.</p>
+            <p className="empty">Zatím žádné panely. Vlož shot list vlevo, nebo přidej panel ručně.</p>
           ) : (
             <div className="panel-grid">
               {project.panels.map((panel, i) => (
-                <div
+                <article
                   key={panel.id}
-                  className="surface panel"
-                  style={{ animationDelay: `${Math.min(i, 8) * 0.05}s` }}
+                  className="card"
+                  style={{ animationDelay: `${Math.min(i, 8) * 0.04}s` }}
                 >
-                  <div className="panel__meta">
-                    <span className="panel__index">{String(i + 1).padStart(2, "0")}</span>
-                    <select
-                      className="select"
-                      style={{ width: "auto" }}
-                      value={panel.cameraType}
-                      onChange={(e) => {
-                        const panels = [...project.panels];
-                        panels[i].cameraType = e.target.value;
-                        setProject({ ...project, panels });
-                      }}
-                    >
-                      {CAMERA_TYPES.map((c) => (
-                        <option key={c}>{c}</option>
-                      ))}
-                    </select>
+                  <div className="card__media">
+                    <span className="card__badge">{String(i + 1).padStart(2, "0")}</span>
+                    <div className="card__cam">
+                      <select
+                        value={panel.cameraType}
+                        onChange={(e) => updatePanel(i, { cameraType: e.target.value })}
+                        aria-label="Typ kamery"
+                      >
+                        {CAMERA_TYPES.map((c) => (
+                          <option key={c}>{c}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {panel.imageUrl ? (
+                      <img src={panel.imageUrl} alt="" />
+                    ) : (
+                      <div className="card__placeholder">Bez obrázku</div>
+                    )}
                   </div>
-                  <textarea
-                    className="field"
-                    value={panel.prompt}
-                    onChange={(e) => {
-                      const panels = [...project.panels];
-                      panels[i].prompt = e.target.value;
-                      setProject({ ...project, panels });
-                    }}
-                    rows={3}
-                  />
-                  <div className="panel__footer">
-                    <input
-                      className="number"
-                      type="number"
-                      value={panel.duration}
-                      onChange={(e) => {
-                        const panels = [...project.panels];
-                        panels[i].duration = Number(e.target.value);
-                        setProject({ ...project, panels });
-                      }}
-                      aria-label="Délka panelu"
+                  <div className="card__body">
+                    <textarea
+                      className="card__prompt"
+                      value={panel.prompt}
+                      onChange={(e) => updatePanel(i, { prompt: e.target.value })}
+                      rows={2}
                     />
-                    <button
-                      type="button"
-                      className="btn btn--primary btn--small"
-                      onClick={() => generatePanel(i)}
-                      disabled={loading}
-                    >
-                      {panel.imageUrl ? "Regenerovat" : "Generovat"}
-                    </button>
+                    <div className="card__footer">
+                      <input
+                        className="card__dur"
+                        type="number"
+                        step="0.5"
+                        value={panel.duration}
+                        onChange={(e) => updatePanel(i, { duration: Number(e.target.value) })}
+                        aria-label="Délka"
+                      />
+                      <button
+                        type="button"
+                        className="btn btn--icon"
+                        onClick={() => generatePanel(i)}
+                        disabled={loading}
+                        title={panel.imageUrl ? "Regenerovat" : "Generovat"}
+                        aria-label={panel.imageUrl ? "Regenerovat" : "Generovat"}
+                      >
+                        <IconRefresh />
+                      </button>
+                    </div>
                   </div>
-                  {panel.imageUrl && (
-                    <img src={panel.imageUrl} alt="" className="panel__image" />
-                  )}
-                </div>
+                </article>
               ))}
             </div>
           )}
-        </section>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
