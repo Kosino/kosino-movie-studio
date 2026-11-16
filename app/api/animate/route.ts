@@ -4,14 +4,10 @@ import path from "path";
 import { spawnSync } from "child_process";
 import { randomUUID } from "crypto";
 import { ensureDirs, ANIMATIONS_DIR, publicUrl } from "@/lib/paths";
+import { isSafeId, resolvePublicAsset, resolveUnderRoot } from "@/lib/safe-path";
+import { requireCaller } from "@/lib/require-auth";
 
 export const runtime = "nodejs";
-
-function resolvePublicFile(url: string): string | null {
-  if (!url.startsWith("/")) return null;
-  const abs = path.join(process.cwd(), "public", url.replace(/^\//, ""));
-  return fs.existsSync(abs) ? abs : null;
-}
 
 function escapeConcatPath(filePath: string): string {
   return filePath.replace(/'/g, "'\\''");
@@ -38,13 +34,17 @@ function normalizeFrame(src: string, dest: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
+  const identity = await requireCaller(req);
+  if (identity instanceof Response) return identity;
+
   try {
     ensureDirs();
     const body = await req.json();
     const imageUrls: string[] = Array.isArray(body.imageUrls)
       ? body.imageUrls.filter((u: unknown) => typeof u === "string")
       : [];
-    const projectId = body.projectId ? String(body.projectId) : randomUUID();
+    const rawProjectId = body.projectId ? String(body.projectId) : "";
+    const projectId = isSafeId(rawProjectId) ? rawProjectId : randomUUID();
     const secondsPerFrame = Number(body.secondsPerFrame) || 2;
 
     if (imageUrls.length === 0) {
@@ -55,8 +55,8 @@ export async function POST(req: NextRequest) {
     }
 
     const files = imageUrls
-      .map(resolvePublicFile)
-      .filter((f): f is string => Boolean(f));
+      .map(resolvePublicAsset)
+      .filter((f): f is string => Boolean(f) && fs.existsSync(f as string));
 
     if (files.length === 0) {
       return NextResponse.json(
@@ -77,7 +77,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const workDir = path.join(ANIMATIONS_DIR, `work-${projectId}`);
+    const workDir = resolveUnderRoot(ANIMATIONS_DIR, `work-${projectId}`);
+    const outPath = resolveUnderRoot(ANIMATIONS_DIR, `${projectId}.mp4`);
+    if (!workDir || !outPath) {
+      return NextResponse.json({ error: "Neplatné ID projektu" }, { status: 400 });
+    }
+
     fs.rmSync(workDir, { recursive: true, force: true });
     fs.mkdirSync(workDir, { recursive: true });
 
@@ -103,7 +108,6 @@ export async function POST(req: NextRequest) {
     lines.push(`file '${escapeConcatPath(normalized[normalized.length - 1])}'`);
     fs.writeFileSync(listFile, lines.join("\n") + "\n", "utf8");
 
-    const outPath = path.join(ANIMATIONS_DIR, `${projectId}.mp4`);
     if (fs.existsSync(outPath)) fs.unlinkSync(outPath);
 
     const result = spawnSync(
@@ -136,11 +140,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({
-      videoUrl: publicUrl(outPath),
-      projectId,
-      frameCount: normalized.length,
-    });
+    return NextResponse.json(
+      {
+        videoUrl: publicUrl(outPath),
+        projectId,
+        frameCount: normalized.length,
+      },
+      { headers: { "Cache-Control": "private, no-store" } }
+    );
   } catch (e) {
     const message = e instanceof Error ? e.message : "Animace selhala";
     return NextResponse.json({ error: message }, { status: 500 });

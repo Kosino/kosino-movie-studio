@@ -135,13 +135,15 @@ async function editImage(opts: {
 }): Promise<string> {
   const fs = await import("fs");
   const path = await import("path");
+  const { resolvePublicAsset } = await import("./safe-path");
   const { key, prompt, referencePath } = opts;
 
-  const abs = referencePath.startsWith("/")
-    ? path.join(process.cwd(), "public", referencePath)
-    : path.join(process.cwd(), referencePath);
+  // Only read reference images that live under public/ (uploads, generated, demo).
+  const abs = resolvePublicAsset(
+    referencePath.startsWith("/") ? referencePath : `/${referencePath}`
+  );
 
-  if (!fs.existsSync(abs)) {
+  if (!abs || !fs.existsSync(abs)) {
     throw new Error(`Reference not found: ${referencePath}`);
   }
 
